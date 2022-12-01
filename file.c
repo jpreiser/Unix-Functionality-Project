@@ -5,6 +5,7 @@
 
 int file_cat(char *name)
 {
+	int i, j;
 	int inodeNum = search_cur_dir(name);
 	Inode inode = read_inode(inodeNum);
 
@@ -26,7 +27,7 @@ int file_cat(char *name)
 	char *str = (char *)malloc(sizeof(char) * (size + 1));
 	str[size] = '\0';
 
-	for (int i = 0; i < 15; i++) {
+	for (i = 0; i < 15; i++) {
 		if (i >= numBlock) {
 			break;
 		}
@@ -46,7 +47,7 @@ int file_cat(char *name)
 		read_disk_block(inode.indirectBlock, (char *) indirectBlockMap);
 
 		char indirectBuffer[BLOCK_SIZE];
-		for (int i = 15; i < numBlock; i++) {
+		for (i = 15; i < numBlock; i++) {
 			read_disk_block(indirectBlockMap[i - 15], indirectBuffer);
 
 			if (size >= BLOCK_SIZE) {
@@ -66,31 +67,24 @@ int file_cat(char *name)
 
 int file_remove(char *name)
 {
+	int i, j;
 	int inodeNum = search_cur_dir(name);
 	Inode inode = read_inode(inodeNum);
 
-	if (inodeNum < 0) 
-	{
+	if (inodeNum < 0) {
 		printf("rm Error: File %s was not found.\n", name);
 		return -1;
-	} 
-	else if (inode.type == directory) 
-	{
+	} else if (inode.type == directory) {
 		printf("rm Error: Cannot remove a directory.\n");
 		return -1;
-	} 
-	else if (curDir.numEntry == 0) 
-	{
+	} else if (curDir.numEntry == 0) {
 		printf("rm Error: There are no files to remove in this directory\n");
 		return -1;
 	}
 
-	for (int i = 0; i < curDir.numEntry; i++) 
-	{
-		if (strcmp(name, curDir.dentry[i].name) == 0) 
-		{
-			for (int j = i + 1; i < curDir.numEntry; j++) 
-			{
+	for (i = 0; i < curDir.numEntry; i++) {
+		if (strcmp(name, curDir.dentry[i].name) == 0) {
+			for (j = i + 1; i < curDir.numEntry; j++) {
 				curDir.dentry[i] = curDir.dentry[j];
 				i++;
 			}
@@ -101,31 +95,24 @@ int file_remove(char *name)
 	}
 
 	int numBlock = inode.size / BLOCK_SIZE;
-
-	if (inode.size % BLOCK_SIZE > 0) 
-	{
+	if (inode.size % BLOCK_SIZE > 0) {
 		numBlock++;
 	}
 
-	if (inode.linkCount == 1) 
-	{
-		for (int i = 0; i < 15; i++) 
-		{
-			if (i >= numBlock) 
-			{
+	if (inode.linkCount == 1) {
+		for (i = 0; i < 15; i++) {
+			if (i >= numBlock) {
 				break;
 			}
 
 			free_block(inode.directBlock[i]);
 		}
 
-		if (inode.size > 7680) 
-		{
+		if (inode.size > 7680) {
 			int indirectBuffer[128];
 			read_disk_block(inode.indirectBlock, indirectBuffer);
 
-			for (int i = 15; i < numBlock; i++) 
-			{
+			for (i = 15; i < numBlock; i++) {
 				free_block(indirectBuffer[i - 15]);
 			}
 
@@ -133,9 +120,7 @@ int file_remove(char *name)
 		}
 
 		free_inode(inodeNum);
-	} 
-	else 
-	{
+	} else {
 		inode.linkCount--;
 		write_inode(inodeNum, inode);
 	}
@@ -150,33 +135,22 @@ int hard_link(char *src, char *dest)
 	Inode srcInode = read_inode(srcInodeNum);
 	Inode destInode = read_inode(destInodeNum);
 
-	if (srcInodeNum < 0) 
-	{
+	if (srcInodeNum < 0) {
 		printf("ln Error: File %s was not found.\n", src);
 		return -1;
-	} 
-	else if (destInodeNum >= 0) 
-	{
+	} else if (destInodeNum >= 0) {
 		printf("ln Error: File %s exists and cannot be used for linking.\n", dest);
 		return -1;
-	} 
-	else if (srcInode.type == directory) 
-	{
+	} else if (srcInode.type == directory) {
 		printf("ln Error: %s is a directory.\n", src);
 		return -1;
-	} 
-	else if (curDir.numEntry + 1 > MAX_DIR_ENTRY) 
-	{
+	} else if (curDir.numEntry + 1 > MAX_DIR_ENTRY) {
 		printf("ln Error: Current directory is full.\n");
 		return -1;
-	} 
-	else if (srcInode.blockCount > superBlock.freeBlockCount) 
-	{
+	} else if (srcInode.blockCount > superBlock.freeBlockCount) {
 		printf("ln Error: Not enough free blocks in the super block.\n");
 		return -1;
-	} 
-	else if (superBlock.freeInodeCount < 1) 
-	{
+	} else if (superBlock.freeInodeCount < 1) {
 		printf("ln Error: Not enough free inodes in the super block.\n");
 		return -1;
 	}
@@ -189,52 +163,42 @@ int hard_link(char *src, char *dest)
 	curDir.dentry[curDir.numEntry].inode = srcInodeNum;
 	curDir.numEntry++;
 
-	printf("Link created: %s\n", dest);
+	printf("Hard link generated: %s\n", dest);
 
 	return 0;
 }
 
 int file_copy(char *src, char *dest)
 {
+	int i, j;
 	int srcInodeNum = search_cur_dir(src);
 	int destInodeNum = search_cur_dir(dest);
 	Inode srcInode = read_inode(srcInodeNum);
 
 	int numBlock = srcInode.size / BLOCK_SIZE;
-	if (srcInode.size % BLOCK_SIZE > 0) 
-	{
+	if (srcInode.size % BLOCK_SIZE > 0) {
 		numBlock++;
 	}
 
-	if (srcInodeNum < 0) 
-	{
+	if (srcInodeNum < 0) {
 		printf("cp Error: File %s was not found.\n", src);
 		return -1;
-	} 
-	else if (destInodeNum >= 0) 
-	{
+	} else if (destInodeNum >= 0) {
 		printf("cp Error: File %s exists and cannot be over written.\n", dest);
 		return -1;
-	} 
-	else if (curDir.numEntry + 1 > MAX_DIR_ENTRY) 
-	{
+	} else if (curDir.numEntry + 1 > MAX_DIR_ENTRY) {
 		printf("cp Error: directory is full.\n");
 		return -1;
-	} 
-	else if (superBlock.freeInodeCount < 1) 
-	{
+	} else if (superBlock.freeInodeCount < 1) {
 		printf("cp Error: inode is full.\n");
 		return -1;
-	} 
-	else if ((srcInode.size > 7680 && numBlock + 1 > superBlock.freeBlockCount) || numBlock > superBlock.freeBlockCount) 
-	{
+	} else if ((srcInode.size > 7680 && numBlock + 1 > superBlock.freeBlockCount) || numBlock > superBlock.freeBlockCount) {
 		printf("cp Error: data block is full.\n");
 		return -1;
 	}
 
 	destInodeNum = get_inode();
-	if (destInodeNum < 0) 
-	{
+	if (destInodeNum < 0) {
 		printf("cp Error: Not enough inodes.\n");
 		return -1;
 	}
@@ -247,16 +211,13 @@ int file_copy(char *src, char *dest)
 	int block;
 	char srcBuffer[BLOCK_SIZE];
 
-	for (int i = 0; i < 15; i++) 
-	{
-		if (i >= numBlock) 
-		{
+	for (i = 0; i < 15; i++) {
+		if (i >= numBlock) {
 			break;
 		}
 
 		block = get_block();
-		if (block == -1) 
-		{
+		if (block == -1) {
 			printf("cp Error: get_block failed.\n");
 			return -1;
 		}
@@ -266,11 +227,9 @@ int file_copy(char *src, char *dest)
 		write_disk_block(block, srcBuffer);
 	}
 
-	if (srcInode.size > 7680) 
-	{
+	if (srcInode.size > 7680) {
 		block = get_block();
-		if (block == -1) 
-		{
+		if (block == -1) {
 			printf("cp Error: get_block failed.\n");
 			return -1;
 		}
@@ -280,14 +239,12 @@ int file_copy(char *src, char *dest)
 		int srcIndirectBlockMap[128];
 		int destIndirectBlockMap[128];
 		read_disk_block(srcInode.indirectBlock, (char *) srcIndirectBlockMap);
-		printf("3\n");
+
 
 		char srcIndirectBuffer[BLOCK_SIZE];
-		for (int i = 15; i < numBlock; i++) 
-		{
+		for (i = 15; i < numBlock; i++) {
 			block = get_block();
-			if (block == -1) 
-			{
+			if (block == -1) {
 				printf("cp Error: get_block failed.\n");
 				return -1;
 			}
@@ -306,7 +263,7 @@ int file_copy(char *src, char *dest)
 	curDir.numEntry++;
 
 	write_inode(destInodeNum, destInode);
-	printf("File copy success: copied %s to %s.\n", src, dest);
+	printf("File copy succeed: from %s to %s\n", src, dest);
 
 	return 0;
 }

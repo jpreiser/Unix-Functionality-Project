@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "API.h"
 
+
 int dir_make(char* name)
 {
 	int inodeNum = search_cur_dir(name);
@@ -49,13 +50,14 @@ int dir_make(char* name)
 	newDentry.dentry[1].inode = curDir.dentry[0].inode;
 
 	write_disk_block(block, (char *)&newDentry);
-	write_disk_block(curDirInode, (char*)&curDir);
+	write_disk_block(curDirBlock, (char*)&curDir);
 
 	return 0;
 }
 
 int dir_remove(char *name)
 {
+	int i, j;
 	int inodeNum = search_cur_dir(name);
 	Inode inode = read_inode(inodeNum);
 	Dentry dentry;
@@ -78,9 +80,9 @@ int dir_remove(char *name)
 		return -1;
 	}
 
-	for (int i = 0; i < curDir.numEntry; i++) {
+	for (i = 0; i < curDir.numEntry; i++) {
 		if (strcmp(name, curDir.dentry[i].name) == 0) {
-			for (int j = i + 1; i < curDir.numEntry; j++) {
+			for (j = i + 1; i < curDir.numEntry; j++) {
 				curDir.dentry[i] = curDir.dentry[j];
 				i++;
 			}
@@ -90,7 +92,7 @@ int dir_remove(char *name)
 		}
 	}
 
-	for (int i = 0; i < inode.blockCount; i++) {
+	for (i = 0; i < inode.blockCount; i++) {
 		free_block(inode.directBlock[i]);
 	}
 
@@ -105,40 +107,35 @@ int dir_remove(char *name)
 
 int dir_change(char* name)
 {
-	if (strcmp(name, ".") == 0) 
-	{
+	if (strcmp(name, ".") == 0) {
 		return 0;
-	} 
-	else if (strcmp(name, "..") == 0) 
-	{
+	} else if (strcmp(name, "..") == 0) {
 		int parentInodeNum = curDir.dentry[1].inode;
 		Inode parentInode = read_inode(parentInodeNum);
 		int parentBlock = parentInode.directBlock[0];
 
-		Inode currentInode = read_inode(curDirInode);
+		Inode currentInode = read_inode(curDirBlock);
 		write_disk_block(currentInode.directBlock[0], (char *)&curDir);
 
 		read_disk_block(parentBlock, (char *)&curDir);
-		curDirInode = parentInodeNum;
+		curDirBlock = parentInodeNum;
 
 		return 0;
-	} 
-	else 
-	{
+	} else {
 		int inodeNum = search_cur_dir(name);
 		Inode inode = read_inode(inodeNum);
 		int inodeBlock = inode.directBlock[0];
 
-    	if (inodeNum < 0) {
-      	printf("cd Error: %s does not exist.\n", name);
-      	return -1;
-    	}
+    if (inodeNum < 0) {
+      printf("cd Error: %s does not exist.\n", name);
+      return -1;
+    }
 
-		Inode currentInode = read_inode(curDirInode);
+		Inode currentInode = read_inode(curDirBlock);
 		write_disk_block(currentInode.directBlock[0], (char *)&curDir);
 
 		read_disk_block(inodeBlock, (char *)&curDir);
-		curDirInode = inodeNum;
+		curDirBlock = inodeNum;
 
 		return 0;
 	}
