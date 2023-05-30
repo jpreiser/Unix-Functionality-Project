@@ -1,5 +1,4 @@
 Jacob Reiser
-CSCI 4730 Project 4
 
 For this project, I implemented the designated functions in file.c and directory.c,
 df, stat, create, cat, cp, rm, ln, ls, mkdir, rmdir, and cd. I tested the funcitonality
